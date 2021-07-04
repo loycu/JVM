@@ -21,4 +21,9 @@ refer:https://www.jianshu.com/p/ae97b692614e
 打破这种责任制加载方式
 自定义类加载器,重写loadClass方法
 使用线程上下文类加载器
+refer:https://cloud.tencent.com/developer/article/1338623?from=article.detail.1791840
+死锁问题
+一、使用jps查看线程ID
+
+二、使用jstack 3331：查看线程情况
 
