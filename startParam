@@ -1,0 +1,57 @@
+refer :https://cloud.tencent.com/developer/article/1791840 排查 https://zhuanlan.zhihu.com/p/163693285 GC
+内存回收 
+问题:分为eden Survivor1,Survivor2 ,minerGc  Eden : Fron : To = 8 : 1 : 1
+MinerGc:eden Survivor1-> survivor2 or eden survivor2-> survivor1,特点频繁且快
+Survivor1到达年龄晋升老年代
+老年代会引用新生代,如果新生代GC,用卡表解决 512byte 指向新生代
+FullGc
+大对象会先放在Eden,如果不足则放老年代,老年代也不足就FULLgc
+持久代空间不足
+-XX:+HeapDumpOnOutOfMemoryError和-XX:HeapDumpPath= 参数
+-XX:+UsePSAdaptiveSurvivorSizePolicy动态调整Eden和Survivor
+-XX:SurvivorRatio 固定比率
+-XX:+MaxTenuringThreshold 复制次数 15次 promote
+-XX:TargetSurvivorRatio  单个 Survivor 区已经被占用了 50% 较高次数复制的对象晋升老年代
+标记 - 复制算法
+理想情况下Eden区都死亡了大概一个线程方法执行的堆对象,很少,复制算法效果好,空间耗尽,活着的移动过去
+
+堆线程共享 XX:+UseTLAB解决堆碰撞 TLAB（Thread Local Allocation Buffer)
+bump the pointer 用两个指针锁定这个线程分配内存大小
+问题:CPU,MEM,IO,NET
+stop-the-world 用写屏障和读屏障译器生成的代码中 并行GC减少时间
+
+清除把对象内存占用释放,压缩把对象移动到头部,复制分多个区,一个区空闲一个区忙碌,只有from分配内存
+新生代 Serial，Parallel Scavenge 和 Parallel New  复制算法 
+老年代 Serial Old 和 Parallel Old，标记压缩 以及 CMS 标记清除 和应用程序一直运行
+
+强引用 outofMemoryError
+软引用 缓存,内存不足回收,是先GC如果有空余空间就不回收
+弱引用 ThreadLocal WeakHashMap 垃圾回收就回收掉 线程未结束
+Thread Ref -> Thread -> ThreaLocalMap -> Entry -> value 线程池线程未结束
+因为弱引用当key,值就不能回收,可达性算法为什么会出现这个问题呢
+
+
+方法区 永久代
+
+栈->堆->方法区 间接引用
+
+-X no_standard -XX 
+引用计数法 循环引用,计数器存储,频繁更新 对象内存储该对象被引用次数
+新可达性分析算法 gcRoots liveset 被引用对象 mark 堆外到对内引用,多线程 误报漏报问题 安全点 然后stop-the-world
+
+JNI本地代码 JAVA NATIVE INTERFACE
+
+系统级别
+top cpu 周期性排查 top -Hp 6814 使用率
+free -m
+vmstat  虚拟内存 缓存缓冲磁盘等  vmstat 2 10  -t 每两秒10次
+磁盘 iostat vmstat lsof 
+网络 dstat vmstat
+应用级别
+jstack top cpu
+jmap内存 jmap -dump:format=b,file=/usr/local/logs/gc/dump.hprof {pid} 用mat分析
+MAT(Memory Analyzer Tool) 堆分析工具
+
+GC日志
+-XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/usr/local/gc/gc.log -XX:+UseConcMarkSweepGC
+日志
